@@ -650,8 +650,15 @@ export default function Home() {
     if (!p || p.id !== e.pointerId) return;
     const time = performance.now();
     const dt = Math.min(0.05, (time - (p.samples.at(-1)?.t ?? time)) / 1000);
-    p.samples.push({ x: e.clientX, y: e.clientY, t: time });
-    p.samples = p.samples.filter((v) => performance.now() - v.t < 2400);
+    const coalesced = e.nativeEvent.getCoalescedEvents?.() ?? [e.nativeEvent];
+    for (const event of coalesced) {
+      p.samples.push({
+        x: event.clientX,
+        y: event.clientY,
+        t: event.timeStamp || time,
+      });
+    }
+    p.samples = p.samples.filter((v) => time - v.t < 2400);
     const g = gesture(p.samples);
     p.spin = g.spin;
     p.angle += g.spin * dt;

@@ -127,6 +127,8 @@ export function createBallView(host: HTMLElement, view: Viewport): BallView {
   trailGeometry.setAttribute('position', trailAttribute);
   trailGeometry.setDrawRange(0, 0);
   const tail = new THREE.Line(trailGeometry, trailMaterial);
+  // 동적 궤적은 초기 빈 버퍼의 경계로 컬링하면 모바일 GPU에서 사라질 수 있다.
+  tail.frustumCulled = false;
   scene.add(tail);
   const render = () => renderer.render(scene, camera);
   return {
