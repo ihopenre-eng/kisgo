@@ -52,6 +52,16 @@ jobs:
           GITHUB_PAGES_BASE_PATH: ${{ steps.pages-path.outputs.base_path }}
           NEXT_PUBLIC_BASE_PATH: ${{ steps.pages-path.outputs.base_path }}
 
+      - name: 정적 자산 경로 정리
+        shell: bash
+        run: |
+          base_path="${{ steps.pages-path.outputs.base_path }}"
+          prefixed_assets="dist/client${base_path}/_next"
+          if [ -n "$base_path" ] && [ -d "$prefixed_assets" ]; then
+            mv "$prefixed_assets" dist/client/_next
+            rmdir "dist/client${base_path}"
+          fi
+
       - name: Pages 설정
         uses: actions/configure-pages@v5
 
