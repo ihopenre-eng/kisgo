@@ -275,6 +275,7 @@ svg {
     0 15px 45px #38593720,
     0 0 0 5px white;
   isolation: isolate;
+  contain: layout paint;
 }
 .scene {
   position: absolute;
@@ -350,6 +351,11 @@ svg {
   transform: translate(-50%, -50%);
   box-shadow: 0 0 20px #fff2;
   pointer-events: none;
+  transition:
+    left 220ms linear,
+    top 220ms linear,
+    width 220ms linear,
+    height 220ms linear;
 }
 .target-ring > div {
   position: absolute;
