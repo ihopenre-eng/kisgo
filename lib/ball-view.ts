@@ -7,15 +7,12 @@ export type BallView = {
   dispose: () => void;
 };
 export function createBallView(host: HTMLElement, view: Viewport): BallView {
-  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
   const renderer = new THREE.WebGLRenderer({
     alpha: true,
-    antialias: !coarsePointer,
-    powerPreference: 'high-performance',
+    antialias: true,
+    powerPreference: 'low-power',
   });
-  renderer.setPixelRatio(
-    Math.min(devicePixelRatio, coarsePointer ? 1.25 : 1.5),
-  );
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.setSize(view.width, view.height);
   renderer.setClearColor(0, 0);
   renderer.domElement.className = 'ball-webgl';
@@ -42,8 +39,6 @@ export function createBallView(host: HTMLElement, view: Viewport): BallView {
     new THREE.MeshStandardMaterial({ color: 0x193c34, roughness: 0.4 }),
   ];
   const geometries: THREE.BufferGeometry[] = [];
-  const sphereWidthSegments = coarsePointer ? 24 : 32;
-  const sphereHeightSegments = coarsePointer ? 12 : 16;
   function mesh(geometry: THREE.BufferGeometry, material: THREE.Material) {
     geometries.push(geometry);
     const m = new THREE.Mesh(geometry, material);
@@ -53,8 +48,8 @@ export function createBallView(host: HTMLElement, view: Viewport): BallView {
   mesh(
     new THREE.SphereGeometry(
       BALL_RADIUS,
-      sphereWidthSegments,
-      sphereHeightSegments,
+      48,
+      24,
       0,
       Math.PI * 2,
       0,
@@ -65,8 +60,8 @@ export function createBallView(host: HTMLElement, view: Viewport): BallView {
   mesh(
     new THREE.SphereGeometry(
       BALL_RADIUS,
-      sphereWidthSegments,
-      sphereHeightSegments,
+      48,
+      24,
       0,
       Math.PI * 2,
       Math.PI / 2,
@@ -77,7 +72,7 @@ export function createBallView(host: HTMLElement, view: Viewport): BallView {
   mesh(
     new THREE.SphereGeometry(
       BALL_RADIUS * 1.007,
-      sphereWidthSegments,
+      48,
       6,
       0,
       Math.PI * 2,
@@ -87,19 +82,19 @@ export function createBallView(host: HTMLElement, view: Viewport): BallView {
     materials[2],
   );
   const rim = mesh(
-    new THREE.CylinderGeometry(0.044, 0.044, 0.016, 20),
+    new THREE.CylinderGeometry(0.044, 0.044, 0.016, 32),
     materials[2],
   );
   rim.rotation.x = Math.PI / 2;
   rim.position.z = BALL_RADIUS - 0.002;
   const button = mesh(
-    new THREE.CylinderGeometry(0.031, 0.031, 0.018, 20),
+    new THREE.CylinderGeometry(0.031, 0.031, 0.018, 32),
     materials[1],
   );
   button.rotation.x = Math.PI / 2;
   button.position.z = BALL_RADIUS + 0.009;
   const dot = mesh(
-    new THREE.CylinderGeometry(0.021, 0.021, 0.019, 20),
+    new THREE.CylinderGeometry(0.021, 0.021, 0.019, 32),
     materials[1],
   );
   dot.rotation.x = Math.PI / 2;
@@ -110,25 +105,18 @@ export function createBallView(host: HTMLElement, view: Viewport): BallView {
     opacity: 0.14,
     depthWrite: false,
   });
-  const shadowGeometry = new THREE.CircleGeometry(0.22, 24),
+  const shadowGeometry = new THREE.CircleGeometry(0.22, 40),
     shadow = new THREE.Mesh(shadowGeometry, shadowMaterial);
   shadow.rotation.x = -Math.PI / 2;
   scene.add(shadow);
-  const trailPositions = new Float32Array(16 * 3),
-    trailGeometry = new THREE.BufferGeometry(),
+  const trailGeometry = new THREE.BufferGeometry(),
     trailMaterial = new THREE.LineBasicMaterial({
       color: 0xffed9d,
       transparent: true,
       opacity: 0.55,
       depthWrite: false,
     });
-  const trailAttribute = new THREE.BufferAttribute(trailPositions, 3);
-  trailAttribute.setUsage(THREE.DynamicDrawUsage);
-  trailGeometry.setAttribute('position', trailAttribute);
-  trailGeometry.setDrawRange(0, 0);
   const tail = new THREE.Line(trailGeometry, trailMaterial);
-  // 동적 궤적은 초기 빈 버퍼의 경계로 컬링하면 모바일 GPU에서 사라질 수 있다.
-  tail.frustumCulled = false;
   scene.add(tail);
   const render = () => renderer.render(scene, camera);
   return {
@@ -142,17 +130,11 @@ export function createBallView(host: HTMLElement, view: Viewport): BallView {
       render();
     },
     trail(points, curved) {
-      const count = Math.min(points.length, 16);
-      for (let index = 0; index < count; index++) {
-        const point = points[index];
-        trailPositions[index * 3] = point.x;
-        trailPositions[index * 3 + 1] = point.y;
-        trailPositions[index * 3 + 2] = -point.z;
-      }
-      trailAttribute.needsUpdate = true;
-      trailGeometry.setDrawRange(0, count);
+      trailGeometry.setFromPoints(
+        points.map((p) => new THREE.Vector3(p.x, p.y, -p.z)),
+      );
       trailMaterial.color.set(curved ? 0xffe89a : 0xffffff);
-      tail.visible = count > 1;
+      tail.visible = points.length > 1;
     },
     resize(size) {
       camera.aspect = size.width / size.height;

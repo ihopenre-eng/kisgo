@@ -65,8 +65,6 @@ import { FaceDetector, FilesetResolver } from '@mediapipe/tasks-vision';
 
 type Face = { originX: number; originY: number; width: number; height: number };
 type Phase = 'idle' | 'flying' | 'shaking' | 'caught';
-const DETECTION_WIDTH = 320;
-const DETECTION_INTERVAL = 240;
 const pause = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 const publicBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
@@ -102,7 +100,6 @@ export default function Home() {
     ring = useRef<HTMLDivElement>(null);
   const stream = useRef<MediaStream | null>(null),
     detector = useRef<FaceDetector | null>(null),
-    detectionCanvas = useRef<HTMLCanvasElement | null>(null),
     face = useRef<Face | null>(null);
   const alive = useRef(true),
     busy = useRef(false),
@@ -189,7 +186,6 @@ export default function Home() {
     stream.current = null;
     detector.current?.close();
     detector.current = null;
-    detectionCanvas.current = null;
     void audio.current?.close();
     audio.current = null;
   }, []);
@@ -199,7 +195,6 @@ export default function Home() {
     stream.current = null;
     detector.current?.close();
     detector.current = null;
-    detectionCanvas.current = null;
     face.current = null;
     setFaceCount(0);
     setModelReady(false);
@@ -234,39 +229,17 @@ export default function Home() {
         !detector.current ||
         v.readyState < 2 ||
         v.currentTime === lastTime ||
-        document.hidden ||
-        busy.current ||
-        pointer.current
+        document.hidden
       )
         return;
       lastTime = v.currentTime;
       try {
-        const input =
-          detectionCanvas.current ??= document.createElement('canvas');
-        const detectionHeight = Math.max(
-          180,
-          Math.round(DETECTION_WIDTH * (v.videoHeight / v.videoWidth)),
-        );
-        if (input.width !== DETECTION_WIDTH) input.width = DETECTION_WIDTH;
-        if (input.height !== detectionHeight) input.height = detectionHeight;
-        const context = input.getContext('2d', { alpha: false });
-        if (!context) return;
-        context.drawImage(v, 0, 0, input.width, input.height);
-        const result = detector.current.detectForVideo(input, performance.now());
-        const count = result.detections.length;
-        setFaceCount((current) => (current === count ? current : count));
-        const detectedBox =
+        const result = detector.current.detectForVideo(v, performance.now());
+        setFaceCount(result.detections.length);
+        const box =
           result.detections.length === 1
             ? result.detections[0].boundingBox
             : undefined;
-        const box = detectedBox
-          ? {
-              originX: detectedBox.originX * (v.videoWidth / input.width),
-              originY: detectedBox.originY * (v.videoHeight / input.height),
-              width: detectedBox.width * (v.videoWidth / input.width),
-              height: detectedBox.height * (v.videoHeight / input.height),
-            }
-          : undefined;
         face.current = box ?? null;
         if (box && arena.current) {
           lastSeen.current = performance.now();
@@ -285,7 +258,7 @@ export default function Home() {
         setCameraError('얼굴 감지가 중단됐어요. 카메라를 다시 시작해주세요.');
         stopCamera();
       }
-    }, DETECTION_INTERVAL);
+    }, 180);
     return () => clearInterval(timer);
   }, [modelReady, stopCamera]);
   function chime(success: boolean) {
@@ -323,9 +296,8 @@ export default function Home() {
       const next = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 640, max: 1280 },
-          height: { ideal: 480, max: 720 },
-          frameRate: { ideal: 30, max: 30 },
+          width: { ideal: 640 },
+          height: { ideal: 480 },
         },
         audio: false,
       });
@@ -650,15 +622,8 @@ export default function Home() {
     if (!p || p.id !== e.pointerId) return;
     const time = performance.now();
     const dt = Math.min(0.05, (time - (p.samples.at(-1)?.t ?? time)) / 1000);
-    const coalesced = e.nativeEvent.getCoalescedEvents?.() ?? [e.nativeEvent];
-    for (const event of coalesced) {
-      p.samples.push({
-        x: event.clientX,
-        y: event.clientY,
-        t: event.timeStamp || time,
-      });
-    }
-    p.samples = p.samples.filter((v) => time - v.t < 2400);
+    p.samples.push({ x: e.clientX, y: e.clientY, t: time });
+    p.samples = p.samples.filter((v) => performance.now() - v.t < 2400);
     const g = gesture(p.samples);
     p.spin = g.spin;
     p.angle += g.spin * dt;
