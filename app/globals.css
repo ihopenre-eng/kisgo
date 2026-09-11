@@ -774,6 +774,27 @@ svg {
   color: #284c38;
   font-size: 15px;
 }
+.caught-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px
+    max(16px, env(safe-area-inset-bottom));
+  background: #102a22a6;
+  backdrop-filter: blur(4px);
+}
+.caught-overlay .game-dialog {
+  position: relative;
+  margin: 0;
+  border: 0;
+}
+.caught-description {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #798574;
+}
 .game-dialog .modal-title {
   font-size: 23px;
   line-height: 1.4;

@@ -987,14 +987,9 @@ export default function Home() {
         </TabsList>
       </Tabs>
       <Dialog
-        open={modal !== null}
+        open={modal === 'help'}
         onOpenChange={(open) => {
-          if (!open && !saving) {
-            if (modal === 'caught') resetCatch();
-            else {
-              setModal(null);
-            }
-          }
+          if (!open) setModal(null);
         }}
       >
         <DialogContent className="game-dialog" showCloseButton={false}>
@@ -1048,71 +1043,89 @@ export default function Home() {
               </button>
             </>
           )}
-          {modal === 'caught' && pending && (
-            <>
-              <span className="caught-eyebrow">
-                <Sparkles size={16} />
-                GOTCHA!
-              </span>
-              <DialogTitle className="modal-title">포획 성공</DialogTitle>
-              <DialogDescription>
-                {pending.grade} Throw ·{' '}
-                {pending.curve ? '커브볼 보너스 포함 · ' : ''}+{pending.xp} XP
-              </DialogDescription>
-              <div className="caught-photo">
-                <Image
-                  unoptimized
-                  width={400}
-                  height={400}
-                  src={pending.photo}
-                  alt="방금 포획한 친구 사진"
-                />
-                <span>
-                  <Check size={17} />
-                </span>
-              </div>
-              <label className="field-label" htmlFor="friend-name">
-                친구 이름
-              </label>
-              <input
-                id="friend-name"
-                className="text-input"
-                maxLength={24}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="친구의 이름을 알려주세요"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void save();
-                }}
-              />
-              {error && (
-                <p className="error-message" role="alert">
-                  {error}
-                </p>
-              )}
-              <button
-                className="primary-btn"
-                disabled={!name.trim() || saving}
-                onClick={() => void save()}
-              >
-                {saving ? (
-                  <LoaderCircle className="spin" size={18} />
-                ) : (
-                  <BookHeart size={18} />
-                )}{' '}
-                {saving ? '저장 중…' : '도감에 저장하기'}
-              </button>
-              <button
-                className="text-btn"
-                onClick={resetCatch}
-                disabled={saving}
-              >
-                <RotateCcw size={14} /> 저장하지 않고 다시 던지기
-              </button>
-            </>
-          )}
         </DialogContent>
       </Dialog>
+      {modal === 'caught' && pending && (
+        <div className="caught-overlay" role="presentation">
+          <dialog
+            open
+            className="game-dialog"
+            data-slot="dialog-content"
+            aria-modal="true"
+            aria-labelledby="caught-title"
+          >
+            <button
+              className="dialog-close icon-btn"
+              aria-label="닫기"
+              disabled={saving}
+              onClick={resetCatch}
+            >
+              <X size={18} />
+            </button>
+            <span className="caught-eyebrow">
+              <Sparkles size={16} />
+              GOTCHA!
+            </span>
+            <h2 className="modal-title" id="caught-title">
+              포획 성공
+            </h2>
+            <p className="caught-description">
+              {pending.grade} Throw ·{' '}
+              {pending.curve ? '커브볼 보너스 포함 · ' : ''}+{pending.xp} XP
+            </p>
+            <div className="caught-photo">
+              <Image
+                unoptimized
+                width={400}
+                height={400}
+                src={pending.photo}
+                alt="방금 포획한 친구 사진"
+              />
+              <span>
+                <Check size={17} />
+              </span>
+            </div>
+            <label className="field-label" htmlFor="friend-name">
+              친구 이름
+            </label>
+            <input
+              id="friend-name"
+              className="text-input"
+              maxLength={24}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="친구의 이름을 알려주세요"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void save();
+              }}
+            />
+            {error && (
+              <p className="error-message" role="alert">
+                {error}
+              </p>
+            )}
+            <button
+              className="primary-btn"
+              disabled={!name.trim() || saving}
+              onClick={() => void save()}
+            >
+              {saving ? (
+                <LoaderCircle className="spin" size={18} />
+              ) : (
+                <BookHeart size={18} />
+              )}{' '}
+              {saving ? '저장 중…' : '도감에 저장하기'}
+            </button>
+            <button
+              className="text-btn"
+              onClick={resetCatch}
+              disabled={saving}
+            >
+              <RotateCcw size={14} /> 저장하지 않고 다시 던지기
+            </button>
+          </dialog>
+        </div>
+      )}
       <Dialog
         open={detail !== null}
         onOpenChange={(open) => {
